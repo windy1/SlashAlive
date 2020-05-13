@@ -10,11 +10,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.util.ChatPaginator;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -23,7 +22,7 @@ public class AliveCommand implements CommandExecutor {
     private static final String PAGE_HEADER = ChatColor.BLUE
         + "================= "
         + ChatColor.YELLOW
-        + "Page %d/%d  "
+        + "Page %d/%d "
         + ChatColor.BLUE
         + "=================";
 
@@ -60,7 +59,7 @@ public class AliveCommand implements CommandExecutor {
                         return removePlayer(sender, args[1]);
                     }
                     case "add": {
-                        return addPlayer(sender, args[1]);
+                        return addPlayer(sender, Bukkit.getPlayer(args[1]));
                     }
                     default: {
                         return false;
@@ -74,25 +73,117 @@ public class AliveCommand implements CommandExecutor {
     }
 
     private boolean showAlive(CommandSender sender, int page) {
+        List<AlivePlayer> players;
+
         try {
-            List<String> usernames = db.selectAllUsernames();
-            Collections.sort(usernames);
-
-            String text = makeAliveMessage(usernames);
-
-            ChatPaginator.ChatPage cp = ChatPaginator.paginate(text, page);
-
-            String header = String.format(PAGE_HEADER, cp.getPageNumber(), cp.getTotalPages());
-            sender.sendMessage(header);
-
-            sender.sendMessage(ChatPaginator.paginate(text, page).getLines());
-
-            sender.spigot().sendMessage(makeFooter(cp.getPageNumber(), cp.getTotalPages()));
+            players = db.selectAll().stream()
+                .sorted(Comparator.comparing(AlivePlayer::getUsername))
+                .collect(Collectors.toList());
         } catch (SQLException e) {
             sender.sendMessage(GENERIC_ERROR);
             log.warning(String.format("failed to list alive players: `%s`", e.getMessage()));
+            return true;
         }
+
+        String text = makeAliveMessage(players);
+        ChatPaginator.ChatPage cp = ChatPaginator.paginate(text, page);
+        int curPage = cp.getPageNumber();
+        int maxPage = cp.getTotalPages();
+
+        sender.sendMessage(String.format(PAGE_HEADER, curPage, maxPage));
+        sender.sendMessage(cp.getLines());
+        sender.spigot().sendMessage(makeFooter(curPage, maxPage));
+
         return true;
+    }
+
+    private TextComponent makeFooter(int curPage, int maxPage) {
+        TextComponent footer = new TextComponent("==================== ");
+        TextComponent prev = new TextComponent("\u226A");
+        TextComponent next = new TextComponent("\u226B");
+        TextComponent rightPad = new TextComponent(" ====================");
+
+        footer.setColor(net.md_5.bungee.api.ChatColor.BLUE);
+        prev.setBold(true);
+        next.setBold(true);
+        rightPad.setColor(net.md_5.bungee.api.ChatColor.BLUE);
+
+        if (curPage > 1) {
+            prev.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+            String cmd = "/alive " + (curPage - 1);
+            prev.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd));
+        } else {
+            prev.setColor(net.md_5.bungee.api.ChatColor.GRAY);
+        }
+
+        if (curPage < maxPage) {
+            next.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+            String cmd = "/alive " + (curPage + 1);
+            next.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd));
+        } else {
+            next.setColor(net.md_5.bungee.api.ChatColor.GRAY);
+        }
+
+        footer.addExtra(prev);
+        footer.addExtra(" ");
+        footer.addExtra(next);
+        footer.addExtra(rightPad);
+
+        return footer;
+    }
+
+    private String makeAliveMessage(Collection<AlivePlayer> players) {
+        Class<?> clazz = null;
+        try {
+            clazz = Class.forName("com.Alvaeron.api.RPEngineAPI");
+        } catch (ClassNotFoundException ignored) {
+            log.warning("RPEngine not found, ignoring");
+        }
+
+        final Class<?> rpClass = clazz;
+
+        return players.stream()
+            .map(p -> {
+                String username = p.getUsername();
+                UUID uuid = UUID.fromString(p.getUUID());
+                Player player = Bukkit.getPlayer(username);
+
+                if (player == null) {
+                    Bukkit.getOfflinePlayer(uuid);
+                }
+
+                if (player == null) {
+                    return ChatColor.GRAY + p.getUsername();
+                }
+
+                String display;
+                if (rpClass != null) {
+                    try {
+                        Method method = rpClass.getDeclaredMethod("getRpName", String.class);
+                        String rpName = (String) method.invoke(null, username);
+
+                        if (rpName == null || rpName.equalsIgnoreCase("NONE")) {
+                            display = username;
+                        } else {
+                            display = String.format("%s (%s)", rpName, username);
+                        }
+                    } catch (IllegalAccessException
+                            | InvocationTargetException
+                            | NoSuchMethodException e) {
+                        String message = "failed to invoke getRpName on RPEngine, " +
+                            "falling back to username: `%s`";
+                        log.warning(String.format(message, e.getMessage()));
+                        display = username;
+                    }
+                } else {
+                    display = username;
+                }
+
+                display = (player.isOnline() ? ChatColor.GREEN : ChatColor.GRAY) + display;
+
+                return display;
+            })
+            .collect(Collectors.joining(ChatColor.WHITE + ", "));
     }
 
     private boolean removePlayer(CommandSender sender, String username) {
@@ -108,14 +199,14 @@ public class AliveCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean addPlayer(CommandSender sender, String username) {
-        if (Bukkit.getPlayer(username) == null) {
-            sender.sendMessage(ChatColor.RED + "Player does not exist");
+    private boolean addPlayer(CommandSender sender, Player player) {
+        if (player == null) {
+            sender.sendMessage(ChatColor.RED + "Player not found");
             return false;
         }
 
         try {
-            db.insertPlayer(username);
+            db.insertPlayer(player);
             sender.sendMessage(ChatColor.GREEN + "Player added");
         } catch (SQLException e) {
             sender.sendMessage(GENERIC_ERROR);
@@ -124,57 +215,5 @@ public class AliveCommand implements CommandExecutor {
         }
 
         return true;
-    }
-
-    private TextComponent makeFooter(int curPage, int maxPage) {
-        TextComponent footer = new TextComponent("==================== ");
-        footer.setColor(net.md_5.bungee.api.ChatColor.BLUE);
-
-        TextComponent prev = new TextComponent("\u226A");
-        prev.setBold(true);
-
-        if (curPage > 0) {
-            prev.setColor(net.md_5.bungee.api.ChatColor.GREEN);
-            String cmd = "/alive " + (curPage - 1);
-            prev.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd));
-        } else {
-            prev.setColor(net.md_5.bungee.api.ChatColor.GRAY);
-        }
-
-        footer.addExtra(prev);
-        footer.addExtra(" ");
-
-        TextComponent next = new TextComponent("\u226B");
-        next.setBold(true);
-
-        if (curPage < maxPage) {
-            next.setColor(net.md_5.bungee.api.ChatColor.GREEN);
-            String cmd = "/alive " + (curPage + 1);
-            next.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd));
-        } else {
-            next.setColor(net.md_5.bungee.api.ChatColor.GRAY);
-        }
-
-        footer.addExtra(next);
-
-        TextComponent rightPad = new TextComponent(" ====================");
-        rightPad.setColor(net.md_5.bungee.api.ChatColor.BLUE);
-
-        footer.addExtra(rightPad);
-
-        return footer;
-    }
-
-    private String makeAliveMessage(Collection<String> usernames) {
-        return usernames.stream()
-            .map(u -> {
-                Player player = Bukkit.getPlayer(u);
-                if (player != null && player.isOnline()) {
-                    return ChatColor.GREEN + u;
-                } else {
-                    return ChatColor.GRAY + u;
-                }
-            })
-            .collect(Collectors.joining(ChatColor.WHITE + ", "));
     }
 }

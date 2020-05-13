@@ -22,7 +22,7 @@ public class BaldListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         try {
-            db.insertPlayer(event.getPlayer().getName());
+            db.insertPlayer(event.getPlayer());
         } catch (SQLException e) {
             String message = "failed to insert player into database: `%s`";
             log.warning(String.format(message, e.getMessage()));

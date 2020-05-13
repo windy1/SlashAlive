@@ -11,6 +11,7 @@ public final class SlashAlive extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // initialize database
         AliveDb db;
         try {
             db = AliveDb.connect(getDataFolder().toPath().resolve("alive.db"), getLogger());
@@ -21,9 +22,11 @@ public final class SlashAlive extends JavaPlugin {
             return;
         }
 
+        // set up listeners
         BaldListener listener = new BaldListener(db, getLogger());
         getServer().getPluginManager().registerEvents(listener, this);
 
+        // set up commands
         Objects.requireNonNull(getCommand("alive"))
             .setExecutor(new AliveCommand(db, getLogger()));
     }

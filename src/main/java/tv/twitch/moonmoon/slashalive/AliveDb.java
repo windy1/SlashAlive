@@ -1,5 +1,7 @@
 package tv.twitch.moonmoon.slashalive;
 
+import org.bukkit.entity.Player;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,14 +12,17 @@ import java.util.logging.Logger;
 public class AliveDb {
 
     private final Connection conn;
+    private final Logger log;
 
-    public AliveDb(Connection conn) throws SQLException {
+    public AliveDb(Connection conn, Logger log) throws SQLException {
         this.conn = Objects.requireNonNull(conn);
+        this.log = Objects.requireNonNull(log);
 
         final String query =
             "CREATE TABLE IF NOT EXISTS living_players (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "username VARCHAR(255) NOT NULL UNIQUE, " +
+                "uuid VARCHAR(255) NOT NULL UNIQUE, " +
                 "first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
             ")";
 
@@ -26,12 +31,19 @@ public class AliveDb {
         }
     }
 
-    public void insertPlayer(String username) throws SQLException {
+    public void insertPlayer(Player player) throws SQLException {
         final String query =
-            "INSERT OR IGNORE INTO living_players (username) VALUES (?)";
+            "INSERT OR IGNORE INTO living_players (username, uuid) VALUES (?, ?)";
+
+        String name = player.getName();
+        String uuid = player.getUniqueId().toString();
+
+        String msg = "Inserting player to database { name=%s, uuid=%s }";
+        log.info(String.format(msg, name, uuid));
 
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, username);
+            stmt.setString(1, player.getName());
+            stmt.setString(2, player.getUniqueId().toString());
             stmt.executeUpdate();
         }
     }
@@ -45,26 +57,20 @@ public class AliveDb {
         }
     }
 
-    public List<String> selectAllUsernames() throws SQLException {
-        final String query = "SELECT username FROM living_players";
+    public List<AlivePlayer> selectAll() throws SQLException {
+        final String query = "SELECT username, uuid FROM living_players";
 
-        List<String> usernames = new ArrayList<>();
+        List<AlivePlayer> players = new ArrayList<>();
         try (Statement stmt = conn.createStatement();
              ResultSet results = stmt.executeQuery(query)) {
             while (results.next()) {
-                usernames.add(results.getString("username"));
+                String username = results.getString("username");
+                String uuid = results.getString("uuid");
+                players.add(new AlivePlayer(username, uuid));
             }
         }
 
-        return usernames;
-    }
-
-    public void clear() throws SQLException {
-        final String query = "DELETE FROM living_players";
-
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate(query);
-        }
+        return players;
     }
 
     public static AliveDb connect(Path path, Logger log) throws SQLException, IOException {
@@ -75,6 +81,6 @@ public class AliveDb {
         }
 
         String url = "jdbc:sqlite:" + path.toString();
-        return new AliveDb(DriverManager.getConnection(url));
+        return new AliveDb(DriverManager.getConnection(url), log);
     }
 }
