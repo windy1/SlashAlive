@@ -1,5 +1,6 @@
 package tv.twitch.moonmoon.slashalive;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -21,8 +22,14 @@ public class BaldListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        if (player.getHealth() <= 0) {
+            return;
+        }
+
         try {
-            db.insertPlayer(event.getPlayer());
+            db.insertPlayer(player);
         } catch (SQLException e) {
             String message = "failed to insert player into database: `%s`";
             log.warning(String.format(message, e.getMessage()));
