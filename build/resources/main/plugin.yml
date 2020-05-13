@@ -1,0 +1,11 @@
+name: SlashAlive
+version: 1.0
+main: tv.twitch.moonmoon.slashalive.SlashAlive
+api-version: 1.13
+prefix: SlashAlive
+authors: [Kasvot]
+description: Lists players that are currently alive (offline and online)
+commands:
+  alive:
+    description: Displays currently alive players
+    usage: /alive [ page | [ [ remove | add ] <username> ] ]
