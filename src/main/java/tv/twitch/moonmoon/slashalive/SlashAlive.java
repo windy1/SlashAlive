@@ -32,12 +32,12 @@ public final class SlashAlive extends JavaPlugin {
             .setExecutor(new AliveCommand(db, getLogger()));
 
         // debug
-        for (int i = 0; i < 200; i++) {
-            try {
-                db.insertPlayer("Test" + i, UUID.randomUUID().toString());
-            } catch (SQLException ignored) {
-            }
-        }
+//        for (int i = 0; i < 200; i++) {
+//            try {
+//                db.insertPlayer("Test" + i, UUID.randomUUID().toString());
+//            } catch (SQLException ignored) {
+//            }
+//        }
     }
 
     @Override
