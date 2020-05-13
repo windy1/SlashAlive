@@ -6,6 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Objects;
+import java.util.UUID;
 
 public final class SlashAlive extends JavaPlugin {
 
@@ -29,6 +30,14 @@ public final class SlashAlive extends JavaPlugin {
         // set up commands
         Objects.requireNonNull(getCommand("alive"))
             .setExecutor(new AliveCommand(db, getLogger()));
+
+        // debug
+        for (int i = 0; i < 200; i++) {
+            try {
+                db.insertPlayer("Test" + i, UUID.randomUUID().toString());
+            } catch (SQLException ignored) {
+            }
+        }
     }
 
     @Override

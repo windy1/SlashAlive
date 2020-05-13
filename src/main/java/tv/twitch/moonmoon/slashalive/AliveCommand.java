@@ -10,7 +10,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.util.ChatPaginator;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.*;
@@ -41,9 +40,11 @@ public class AliveCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (args.length) {
             case 0: {
+                // show first page
                 return showAlive(sender, 1);
             }
             case 1: {
+                // show numbered page
                 try {
                     return showAlive(sender, Integer.parseInt(args[0]));
                 } catch (NumberFormatException e) {
@@ -133,57 +134,35 @@ public class AliveCommand implements CommandExecutor {
     }
 
     private String makeAliveMessage(Collection<AlivePlayer> players) {
-        Class<?> clazz = null;
-        try {
-            clazz = Class.forName("com.Alvaeron.api.RPEngineAPI");
-        } catch (ClassNotFoundException ignored) {
-            log.warning("RPEngine not found, ignoring");
-        }
-
-        final Class<?> rpClass = clazz;
+        Method getRpName = ReflectionUtils.getRpNameMethod(log).orElse(null);
 
         return players.stream()
-            .map(p -> {
-                String username = p.getUsername();
-                UUID uuid = UUID.fromString(p.getUUID());
-                Player player = Bukkit.getPlayer(username);
-
-                if (player == null) {
-                    Bukkit.getOfflinePlayer(uuid);
-                }
-
-                if (player == null) {
-                    return ChatColor.GRAY + p.getUsername();
-                }
-
-                String display;
-                if (rpClass != null) {
-                    try {
-                        Method method = rpClass.getDeclaredMethod("getRpName", String.class);
-                        String rpName = (String) method.invoke(null, username);
-
-                        if (rpName == null || rpName.equalsIgnoreCase("NONE")) {
-                            display = username;
-                        } else {
-                            display = String.format("%s (%s)", rpName, username);
-                        }
-                    } catch (IllegalAccessException
-                            | InvocationTargetException
-                            | NoSuchMethodException e) {
-                        String message = "failed to invoke getRpName on RPEngine, " +
-                            "falling back to username: `%s`";
-                        log.warning(String.format(message, e.getMessage()));
-                        display = username;
-                    }
-                } else {
-                    display = username;
-                }
-
-                display = (player.isOnline() ? ChatColor.GREEN : ChatColor.GRAY) + display;
-
-                return display;
-            })
+            .map(p -> getDisplayName(p, getRpName))
             .collect(Collectors.joining(ChatColor.WHITE + ", "));
+    }
+
+    private String getDisplayName(AlivePlayer p, Method getRpName) {
+        String username = p.getUsername();
+        UUID uuid = UUID.fromString(p.getUUID());
+        Player player = Bukkit.getPlayer(username);
+
+        if (player == null) {
+            Bukkit.getOfflinePlayer(uuid);
+        }
+
+        if (player == null) {
+            return ChatColor.GRAY + p.getUsername();
+        }
+
+        String display = Optional.ofNullable(getRpName)
+            .flatMap(m -> ReflectionUtils.invokeSafe(m, log, username))
+            .filter(o -> !((String) o).equalsIgnoreCase("NONE"))
+            .map(o -> String.format("%s (%s)", o, username))
+            .orElse(username);
+
+        display = (player.isOnline() ? ChatColor.GREEN : ChatColor.GRAY) + display;
+
+        return display;
     }
 
     private boolean removePlayer(CommandSender sender, String username) {

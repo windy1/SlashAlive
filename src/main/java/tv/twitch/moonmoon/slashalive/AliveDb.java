@@ -31,21 +31,22 @@ public class AliveDb {
         }
     }
 
-    public void insertPlayer(Player player) throws SQLException {
+    public void insertPlayer(String name, String uuid) throws SQLException {
         final String query =
             "INSERT OR IGNORE INTO living_players (username, uuid) VALUES (?, ?)";
-
-        String name = player.getName();
-        String uuid = player.getUniqueId().toString();
 
         String msg = "Inserting player to database { name=%s, uuid=%s }";
         log.info(String.format(msg, name, uuid));
 
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, player.getName());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(1, name);
+            stmt.setString(2, uuid);
             stmt.executeUpdate();
         }
+    }
+
+    public void insertPlayer(Player player) throws SQLException {
+        insertPlayer(player.getName(), player.getUniqueId().toString());
     }
 
     public void deletePlayer(String username) throws SQLException {
