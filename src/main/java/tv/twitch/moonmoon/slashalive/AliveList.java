@@ -96,16 +96,13 @@ public class AliveList {
 
     private static String getDisplayName(Logger log, AlivePlayer p, Method getRpName) {
         String username = p.getUsername();
-        UUID uuid = UUID.fromString(p.getUUID());
         Player player = Bukkit.getPlayer(username);
-
-        if (player == null) {
-            Bukkit.getOfflinePlayer(uuid);
-        }
 
         if (player == null) {
             return ChatColor.GRAY + p.getUsername();
         }
+
+        // TODO: getting RP info of OfflinePlayers is currently bugged in RPEngine
 
         String display = Optional.ofNullable(getRpName)
             .flatMap(m -> ReflectionUtils.invokeSafe(log, m, username))

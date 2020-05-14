@@ -8,7 +8,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.sql.SQLException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -21,10 +20,12 @@ public class AliveCommand implements CommandExecutor {
 
     private final AliveDb db;
     private final Logger log;
+    private final List<String> casteSortOrder;
 
-    public AliveCommand(AliveDb db, Logger log) {
+    public AliveCommand(AliveDb db, Logger log, List<String> casteSortOrder) {
         this.db = Objects.requireNonNull(db);
         this.log = Objects.requireNonNull(log);
+        this.casteSortOrder = Objects.requireNonNull(casteSortOrder);
     }
 
     @Override
@@ -69,7 +70,7 @@ public class AliveCommand implements CommandExecutor {
 
         try {
             players = db.selectAll().stream()
-                .sorted(Comparator.comparing(AlivePlayer::getUsername))
+                .sorted(new AlivePlayerComparator(log, casteSortOrder))
                 .collect(Collectors.toList());
         } catch (SQLException e) {
             sender.sendMessage(GENERIC_ERROR);

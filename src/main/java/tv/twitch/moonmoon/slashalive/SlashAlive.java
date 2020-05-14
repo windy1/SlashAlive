@@ -5,6 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -12,6 +13,8 @@ public final class SlashAlive extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+
         Logger log = getLogger();
 
         // initialize database
@@ -31,7 +34,7 @@ public final class SlashAlive extends JavaPlugin {
 
         // set up commands
         Objects.requireNonNull(getCommand("alive"))
-            .setExecutor(new AliveCommand(db, log));
+            .setExecutor(new AliveCommand(db, log, getCasteSortOrder()));
 
         // debug
 //        for (int i = 0; i < 200; i++) {
@@ -40,6 +43,10 @@ public final class SlashAlive extends JavaPlugin {
 //            } catch (SQLException ignored) {
 //            }
 //        }
+    }
+
+    private List<String> getCasteSortOrder() {
+        return getConfig().getStringList("casteSortOrder");
     }
 
     @Override

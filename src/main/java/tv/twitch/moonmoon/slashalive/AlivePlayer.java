@@ -1,5 +1,8 @@
 package tv.twitch.moonmoon.slashalive;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
 import java.util.Objects;
 
 public class AlivePlayer {
