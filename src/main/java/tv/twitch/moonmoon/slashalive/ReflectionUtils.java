@@ -19,7 +19,7 @@ public final class ReflectionUtils {
         }
     }
 
-    public static Optional<Object> invokeSafe(Method method, Logger log, Object... params) {
+    public static Optional<Object> invokeSafe(Logger log, Method method, Object... params) {
         try {
             return Optional.ofNullable(method.invoke(null, params));
         } catch (IllegalAccessException | InvocationTargetException e) {

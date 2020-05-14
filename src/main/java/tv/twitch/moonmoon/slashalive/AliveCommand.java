@@ -1,31 +1,22 @@
 package tv.twitch.moonmoon.slashalive;
 
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.util.ChatPaginator;
 
-import java.lang.reflect.Method;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class AliveCommand implements CommandExecutor {
 
-    private static final String PAGE_HEADER = ChatColor.BLUE
-        + "================= "
-        + ChatColor.YELLOW
-        + "Page %d/%d "
-        + ChatColor.BLUE
-        + "=================";
-
-    private static final String GENERIC_ERROR =
+    public static final String GENERIC_ERROR =
         ChatColor.RED + "An unexpected error occurred. See console for details.";
 
     private final AliveDb db;
@@ -86,83 +77,9 @@ public class AliveCommand implements CommandExecutor {
             return true;
         }
 
-        String text = makeAliveMessage(players);
-        ChatPaginator.ChatPage cp = ChatPaginator.paginate(text, page);
-        int curPage = cp.getPageNumber();
-        int maxPage = cp.getTotalPages();
-
-        sender.sendMessage(String.format(PAGE_HEADER, curPage, maxPage));
-        sender.sendMessage(cp.getLines());
-        sender.spigot().sendMessage(makeFooter(curPage, maxPage));
+        AliveList.make(log, players, page).sendTo(sender);
 
         return true;
-    }
-
-    private TextComponent makeFooter(int curPage, int maxPage) {
-        TextComponent footer = new TextComponent("==================== ");
-        TextComponent prev = new TextComponent("\u226A");
-        TextComponent next = new TextComponent("\u226B");
-        TextComponent rightPad = new TextComponent(" ====================");
-
-        footer.setColor(net.md_5.bungee.api.ChatColor.BLUE);
-        prev.setBold(true);
-        next.setBold(true);
-        rightPad.setColor(net.md_5.bungee.api.ChatColor.BLUE);
-
-        if (curPage > 1) {
-            prev.setColor(net.md_5.bungee.api.ChatColor.GREEN);
-            String cmd = "/alive " + (curPage - 1);
-            prev.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd));
-        } else {
-            prev.setColor(net.md_5.bungee.api.ChatColor.GRAY);
-        }
-
-        if (curPage < maxPage) {
-            next.setColor(net.md_5.bungee.api.ChatColor.GREEN);
-            String cmd = "/alive " + (curPage + 1);
-            next.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd));
-        } else {
-            next.setColor(net.md_5.bungee.api.ChatColor.GRAY);
-        }
-
-        footer.addExtra(prev);
-        footer.addExtra(" ");
-        footer.addExtra(next);
-        footer.addExtra(rightPad);
-
-        return footer;
-    }
-
-    private String makeAliveMessage(Collection<AlivePlayer> players) {
-        Method getRpName = ReflectionUtils.getRpNameMethod(log).orElse(null);
-
-        return players.stream()
-            .map(p -> getDisplayName(p, getRpName))
-            .collect(Collectors.joining(ChatColor.WHITE + ", "));
-    }
-
-    private String getDisplayName(AlivePlayer p, Method getRpName) {
-        String username = p.getUsername();
-        UUID uuid = UUID.fromString(p.getUUID());
-        Player player = Bukkit.getPlayer(username);
-
-        if (player == null) {
-            Bukkit.getOfflinePlayer(uuid);
-        }
-
-        if (player == null) {
-            return ChatColor.GRAY + p.getUsername();
-        }
-
-        String display = Optional.ofNullable(getRpName)
-            .flatMap(m -> ReflectionUtils.invokeSafe(m, log, username))
-            .filter(o -> !((String) o).equalsIgnoreCase("NONE"))
-            .map(o -> String.format("%s (%s)", o, username))
-            .orElse(username);
-
-        display = (player.isOnline() ? ChatColor.GREEN : ChatColor.GRAY) + display;
-
-        return display;
     }
 
     private boolean removePlayer(CommandSender sender, String username) {
