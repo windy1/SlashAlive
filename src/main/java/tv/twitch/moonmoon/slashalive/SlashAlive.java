@@ -7,7 +7,6 @@ import tv.twitch.moonmoon.slashalive.data.AliveDb;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -20,8 +19,6 @@ public final class SlashAlive extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-
         log = getLogger();
         Path dbPath = getDataFolder().toPath().resolve(DB_FILE_NAME);
 
@@ -53,16 +50,12 @@ public final class SlashAlive extends JavaPlugin {
 
         // set up commands
         Objects.requireNonNull(getCommand("alive"))
-            .setExecutor(new AliveCommand(db, log, getCasteSortOrder()));
+            .setExecutor(new AliveCommand(this, db));
 
         // debug
 //        for (int i = 0; i < 200; i++) {
 //            db.insertPlayerAsync("Test" + i, UUID.randomUUID().toString(), r -> {});
 //        }
-    }
-
-    private List<String> getCasteSortOrder() {
-        return getConfig().getStringList("casteSortOrder");
     }
 
     @Override

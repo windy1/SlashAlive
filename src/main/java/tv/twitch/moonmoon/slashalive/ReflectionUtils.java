@@ -7,24 +7,10 @@ import java.util.logging.Logger;
 
 public final class ReflectionUtils {
 
-    private static final String RP_ENGINE_API = "com.Alvaeron.api.RPEngineAPI";
-
     public static Optional<Method> getRpNameMethod(Logger log) {
-        return getMethodSafe(log, "getRpName", String.class);
-    }
-
-    public static Optional<Method> getRpRaceMethod(Logger log) {
-        return getMethodSafe(log, "getRpRace", String.class);
-    }
-
-    private static Optional<Method> getMethodSafe(
-        Logger log,
-        String name,
-        Class<?>... params
-    ) {
         try {
-            return Optional.of(Class.forName(ReflectionUtils.RP_ENGINE_API)
-                .getDeclaredMethod(name, params));
+            return Optional.of(Class.forName("com.Alvaeron.api.RPEngineAPI")
+                .getDeclaredMethod("getRpName", String.class));
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             String message = "failed to retrieve method `%s` in `%s`, using fallbacks";
             log.warning(String.format(message, e.getMessage()));

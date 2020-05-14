@@ -6,12 +6,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import tv.twitch.moonmoon.slashalive.ReflectionUtils;
+import org.bukkit.plugin.Plugin;
 import tv.twitch.moonmoon.slashalive.data.AliveDb;
 import tv.twitch.moonmoon.slashalive.data.AlivePlayer;
 import tv.twitch.moonmoon.slashalive.data.AlivePlayerComparator;
 
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,12 +24,10 @@ public class AliveCommand implements CommandExecutor {
 
     private final AliveDb db;
     private final Logger log;
-    private final List<String> casteSortOrder;
 
-    public AliveCommand(AliveDb db, Logger log, List<String> casteSortOrder) {
+    public AliveCommand(Plugin plugin, AliveDb db) {
         this.db = Objects.requireNonNull(db);
-        this.log = Objects.requireNonNull(log);
-        this.casteSortOrder = Objects.requireNonNull(casteSortOrder);
+        this.log = plugin.getLogger();
     }
 
     @Override
@@ -87,39 +84,11 @@ public class AliveCommand implements CommandExecutor {
     }
 
     private void onSelectAlive(List<AlivePlayer> players, CommandSender sender, int page) {
-        // TODO: move off main thread
-//        fetchCastes(players);
-
         players = players.stream()
-            .sorted(new AlivePlayerComparator(log, casteSortOrder))
+            .sorted(new AlivePlayerComparator())
             .collect(Collectors.toList());
 
         AliveList.make(log, players, page).sendTo(sender);
-    }
-
-    private void fetchCastes(List<AlivePlayer> players) {
-        log.info("fetching castes");
-
-        Method getRpRace = ReflectionUtils.getRpRaceMethod(log).orElse(null);
-        if (getRpRace == null) {
-            return;
-        }
-
-        for (AlivePlayer player : players) {
-            String caste = getCaste(log, getRpRace, player.getUsername());
-
-            log.info("player " + player.getUsername());
-            log.info("caste " + caste);
-
-            player.setCaste(caste);
-        }
-    }
-
-    private static String getCaste(Logger log, Method getRpRace, String username) {
-        return ReflectionUtils.invokeSafe(log, getRpRace, username)
-            .map(Object::toString)
-            .filter(s -> !s.equalsIgnoreCase("NONE"))
-            .orElse(null);
     }
 
     private boolean removePlayer(CommandSender sender, String username) {
