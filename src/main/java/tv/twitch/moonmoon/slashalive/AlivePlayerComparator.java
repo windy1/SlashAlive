@@ -3,7 +3,10 @@ package tv.twitch.moonmoon.slashalive;
 import org.bukkit.Bukkit;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
