@@ -7,8 +7,8 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import tv.twitch.moonmoon.slashalive.data.AliveDb;
 
-import java.sql.SQLException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public class BaldListener implements Listener {
@@ -29,23 +29,23 @@ public class BaldListener implements Listener {
             return;
         }
 
-        // TODO: move off main thread
-        try {
-            db.insertPlayer(player);
-        } catch (SQLException e) {
-            String message = "failed to insert player into database: `%s`";
-            log.warning(String.format(message, e.getMessage()));
-        }
+        db.insertPlayerAsync(player, r -> {
+            Optional<String> err = r.getError();
+            if (err.isPresent()) {
+                String message = "failed to insert player into database: `%s`";
+                log.warning(String.format(message, err.get()));
+            }
+        });
     }
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        // TODO: move off main thread
-        try {
-            db.deletePlayer(event.getEntity().getName());
-        } catch (SQLException e) {
-            String message = "failed to delete player from database: `%s`";
-            log.warning(String.format(message, e.getMessage()));
-        }
+        db.deletePlayerAsync(event.getEntity().getName(), r -> {
+            Optional<String> err = r.getError();
+            if (err.isPresent()) {
+                String message = "failed to delete player from database: `%s`";
+                log.warning(String.format(message, err.get()));
+            }
+        });
     }
 }

@@ -6,31 +6,47 @@ import tv.twitch.moonmoon.slashalive.cmd.AliveCommand;
 import tv.twitch.moonmoon.slashalive.data.AliveDb;
 
 import java.io.IOException;
-import java.sql.SQLException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public final class SlashAlive extends JavaPlugin {
+
+    private static final String DB_FILE_NAME = "alive.db";
+
+    private Logger log;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
 
-        Logger log = getLogger();
+        log = getLogger();
+        Path dbPath = getDataFolder().toPath().resolve(DB_FILE_NAME);
 
         // initialize database
-        // TODO: move off main thread
-        AliveDb db;
         try {
-            db = AliveDb.connect(getDataFolder().toPath().resolve("alive.db"), log);
-        } catch (SQLException | IOException e) {
-            String message = "failed to connect to SQLite database: `%s`";
-            log.warning(String.format(message, e.getMessage()));
+            AliveDb.connect(this, dbPath, this::onDbConnect);
+        } catch (IOException e) {
+            log.warning(String.format("error initializing database: `%s`", e.getMessage()));
             Bukkit.getPluginManager().disablePlugin(this);
-            return;
         }
+    }
 
+    private void onDbConnect(Result<AliveDb> r) {
+        Optional<String> err = r.getError();
+        if (err.isPresent()) {
+            log.warning(err.get());
+            Bukkit.getPluginManager().disablePlugin(this);
+        } else {
+            AliveDb db = r.getResult()
+                .orElseThrow(() -> new IllegalStateException("expected AliveDb instance"));
+            init(db);
+        }
+    }
+
+    private void init(AliveDb db) {
         // set up listeners
         BaldListener listener = new BaldListener(db, log);
         getServer().getPluginManager().registerEvents(listener, this);
@@ -41,10 +57,7 @@ public final class SlashAlive extends JavaPlugin {
 
         // debug
 //        for (int i = 0; i < 200; i++) {
-//            try {
-//                db.insertPlayer("Test" + i, UUID.randomUUID().toString());
-//            } catch (SQLException ignored) {
-//            }
+//            db.insertPlayerAsync("Test" + i, UUID.randomUUID().toString(), r -> {});
 //        }
     }
 

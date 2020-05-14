@@ -12,9 +12,9 @@ import tv.twitch.moonmoon.slashalive.data.AlivePlayer;
 import tv.twitch.moonmoon.slashalive.data.AlivePlayerComparator;
 
 import java.lang.reflect.Method;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -54,11 +54,9 @@ public class AliveCommand implements CommandExecutor {
                 switch (args[0]) {
                     case "remove":
                     case "rm": {
-                        // TODO: move off main thread
                         return removePlayer(sender, args[1]);
                     }
                     case "add": {
-                        // TODO: move off main thread
                         return addPlayer(sender, Bukkit.getPlayer(args[1]));
                     }
                     default: {
@@ -73,27 +71,30 @@ public class AliveCommand implements CommandExecutor {
     }
 
     private boolean showAlive(CommandSender sender, int page) {
-        List<AlivePlayer> players;
+        db.selectAllAsync(r -> {
+            Optional<String> err = r.getError();
+            if (err.isPresent()) {
+                sender.sendMessage(GENERIC_ERROR);
+                log.warning(String.format("failed to list alive players: `%s`", err.get()));
+            } else {
+                List<AlivePlayer> players = r.getResult()
+                    .orElseThrow(() -> new IllegalStateException("unexpected null list"));
+                onSelectAlive(players, sender, page);
+            }
+        });
 
-        try {
-            // TODO: move off main thread
-            players = db.selectAll();
-        } catch (SQLException e) {
-            sender.sendMessage(GENERIC_ERROR);
-            log.warning(String.format("failed to list alive players: `%s`", e.getMessage()));
-            return true;
-        }
+        return true;
+    }
 
+    private void onSelectAlive(List<AlivePlayer> players, CommandSender sender, int page) {
         // TODO: move off main thread
-        fetchCastes(players);
+//        fetchCastes(players);
 
         players = players.stream()
             .sorted(new AlivePlayerComparator(log, casteSortOrder))
             .collect(Collectors.toList());
 
         AliveList.make(log, players, page).sendTo(sender);
-
-        return true;
     }
 
     private void fetchCastes(List<AlivePlayer> players) {
@@ -122,14 +123,16 @@ public class AliveCommand implements CommandExecutor {
     }
 
     private boolean removePlayer(CommandSender sender, String username) {
-        try {
-            db.deletePlayer(username);
-            sender.sendMessage(ChatColor.GREEN + "Player removed");
-        } catch (SQLException e) {
-            sender.sendMessage(GENERIC_ERROR);
-            String message = "failed to remove player from database: `%s`";
-            log.warning(String.format(message, e.getMessage()));
-        }
+        db.deletePlayerAsync(username, r -> {
+            Optional<String> err = r.getError();
+            if (err.isPresent()) {
+                sender.sendMessage(GENERIC_ERROR);
+                String message = "failed to remove player from database: `%s`";
+                log.warning(String.format(message, err.get()));
+            } else {
+                sender.sendMessage(ChatColor.GREEN + "Player removed");
+            }
+        });
 
         return true;
     }
@@ -140,14 +143,16 @@ public class AliveCommand implements CommandExecutor {
             return false;
         }
 
-        try {
-            db.insertPlayer(player);
-            sender.sendMessage(ChatColor.GREEN + "Player added");
-        } catch (SQLException e) {
-            sender.sendMessage(GENERIC_ERROR);
-            String message = "failed to add player to database: `%s`";
-            log.warning(String.format(message, e.getMessage()));
-        }
+        db.insertPlayerAsync(player, r -> {
+            Optional<String> err = r.getError();
+            if (err.isPresent()) {
+                sender.sendMessage(GENERIC_ERROR);
+                String message = "failed to add player to database: `%s`";
+                log.warning(String.format(message, err.get()));
+            } else {
+                sender.sendMessage(ChatColor.GREEN + "Player added");
+            }
+        });
 
         return true;
     }
