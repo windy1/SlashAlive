@@ -2,6 +2,8 @@ package tv.twitch.moonmoon.slashalive;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import tv.twitch.moonmoon.slashalive.cmd.AliveCommand;
+import tv.twitch.moonmoon.slashalive.data.AliveDb;
 
 import java.io.IOException;
 import java.sql.SQLException;

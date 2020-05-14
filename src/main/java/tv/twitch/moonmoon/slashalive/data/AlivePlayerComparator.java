@@ -1,6 +1,7 @@
-package tv.twitch.moonmoon.slashalive;
+package tv.twitch.moonmoon.slashalive.data;
 
 import org.bukkit.Bukkit;
+import tv.twitch.moonmoon.slashalive.ReflectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.Comparator;

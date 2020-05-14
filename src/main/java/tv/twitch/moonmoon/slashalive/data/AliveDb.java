@@ -1,4 +1,4 @@
-package tv.twitch.moonmoon.slashalive;
+package tv.twitch.moonmoon.slashalive.data;
 
 import org.bukkit.entity.Player;
 

@@ -1,4 +1,4 @@
-package tv.twitch.moonmoon.slashalive;
+package tv.twitch.moonmoon.slashalive.cmd;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -6,6 +6,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import tv.twitch.moonmoon.slashalive.data.AliveDb;
+import tv.twitch.moonmoon.slashalive.data.AlivePlayer;
+import tv.twitch.moonmoon.slashalive.data.AlivePlayerComparator;
 
 import java.sql.SQLException;
 import java.util.List;

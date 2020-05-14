@@ -5,6 +5,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import tv.twitch.moonmoon.slashalive.data.AliveDb;
 
 import java.sql.SQLException;
 import java.util.Objects;
