@@ -1,6 +1,5 @@
 package tv.twitch.moonmoon.slashalive.data;
 
-import org.bukkit.Bukkit;
 import tv.twitch.moonmoon.slashalive.ReflectionUtils;
 
 import java.lang.reflect.Method;
@@ -42,39 +41,29 @@ public class AlivePlayerComparator implements Comparator<AlivePlayer> {
         // TODO: getting RP info of OfflinePlayers is currently bugged in RPEngine
 
         // start hack
-        boolean p1Online = Bukkit.getPlayer(a.getUsername()) != null;
-        boolean p2Online = Bukkit.getPlayer(b.getUsername()) != null;
-
-        if (!p1Online && !p2Online) {
-            return 0;
-        } else if (!p1Online) {
-            return 1;
-        } else if (!p2Online) {
-            return -1;
-        }
+//        boolean p1Online = Bukkit.getPlayer(a.getUsername()) != null;
+//        boolean p2Online = Bukkit.getPlayer(b.getUsername()) != null;
+//
+//        if (!p1Online && !p2Online) {
+//            return 0;
+//        } else if (!p1Online) {
+//            return 1;
+//        } else if (!p2Online) {
+//            return -1;
+//        }
         // end hack
 
-        String c1 = getCaste(log, getRpRace, a.getUsername());
-        String c2 = getCaste(log, getRpRace, b.getUsername());
+        int i1 = a.getCaste().map(casteSortOrder::get).orElse(-1);
+        int i2 = b.getCaste().map(casteSortOrder::get).orElse(-1);
 
-        Integer i1 = casteSortOrder.get(c1);
-        Integer i2 = casteSortOrder.get(c2);
-
-        if (i1 == null && i2 == null) {
+        if (i1 == -1 && i2 == -1) {
             return 0;
-        } else if (i1 == null) {
+        } else if (i1 == -1) {
             return 1;
-        } else if (i2 == null) {
+        } else if (i2 == -1) {
             return -1;
         } else {
             return Integer.compare(i1, i2);
         }
-    }
-
-    private static String getCaste(Logger log, Method getRpRace, String username) {
-        return ReflectionUtils.invokeSafe(log, getRpRace, username)
-            .map(Object::toString)
-            .filter(s -> !s.equalsIgnoreCase("NONE"))
-            .orElse(null);
     }
 }

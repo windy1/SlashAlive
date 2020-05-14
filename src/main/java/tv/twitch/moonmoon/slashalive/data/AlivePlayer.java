@@ -1,11 +1,14 @@
 package tv.twitch.moonmoon.slashalive.data;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class AlivePlayer {
 
     private final String username;
     private final String uuid;
+
+    private String caste;
 
     public AlivePlayer(String username, String uuid) {
         this.username = Objects.requireNonNull(username);
@@ -18,6 +21,14 @@ public class AlivePlayer {
 
     public String getUUID() {
         return uuid;
+    }
+
+    public Optional<String> getCaste() {
+        return Optional.ofNullable(caste);
+    }
+
+    public void setCaste(String caste) {
+        this.caste = caste;
     }
 
     @Override

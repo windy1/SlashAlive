@@ -6,10 +6,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import tv.twitch.moonmoon.slashalive.ReflectionUtils;
 import tv.twitch.moonmoon.slashalive.data.AliveDb;
 import tv.twitch.moonmoon.slashalive.data.AlivePlayer;
 import tv.twitch.moonmoon.slashalive.data.AlivePlayerComparator;
 
+import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -52,9 +54,11 @@ public class AliveCommand implements CommandExecutor {
                 switch (args[0]) {
                     case "remove":
                     case "rm": {
+                        // TODO: move off main thread
                         return removePlayer(sender, args[1]);
                     }
                     case "add": {
+                        // TODO: move off main thread
                         return addPlayer(sender, Bukkit.getPlayer(args[1]));
                     }
                     default: {
@@ -72,18 +76,49 @@ public class AliveCommand implements CommandExecutor {
         List<AlivePlayer> players;
 
         try {
-            players = db.selectAll().stream()
-                .sorted(new AlivePlayerComparator(log, casteSortOrder))
-                .collect(Collectors.toList());
+            // TODO: move off main thread
+            players = db.selectAll();
         } catch (SQLException e) {
             sender.sendMessage(GENERIC_ERROR);
             log.warning(String.format("failed to list alive players: `%s`", e.getMessage()));
             return true;
         }
 
+        // TODO: move off main thread
+        fetchCastes(players);
+
+        players = players.stream()
+            .sorted(new AlivePlayerComparator(log, casteSortOrder))
+            .collect(Collectors.toList());
+
         AliveList.make(log, players, page).sendTo(sender);
 
         return true;
+    }
+
+    private void fetchCastes(List<AlivePlayer> players) {
+        log.info("fetching castes");
+
+        Method getRpRace = ReflectionUtils.getRpRaceMethod(log).orElse(null);
+        if (getRpRace == null) {
+            return;
+        }
+
+        for (AlivePlayer player : players) {
+            String caste = getCaste(log, getRpRace, player.getUsername());
+
+            log.info("player " + player.getUsername());
+            log.info("caste " + caste);
+
+            player.setCaste(caste);
+        }
+    }
+
+    private static String getCaste(Logger log, Method getRpRace, String username) {
+        return ReflectionUtils.invokeSafe(log, getRpRace, username)
+            .map(Object::toString)
+            .filter(s -> !s.equalsIgnoreCase("NONE"))
+            .orElse(null);
     }
 
     private boolean removePlayer(CommandSender sender, String username) {

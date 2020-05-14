@@ -20,6 +20,7 @@ public final class SlashAlive extends JavaPlugin {
         Logger log = getLogger();
 
         // initialize database
+        // TODO: move off main thread
         AliveDb db;
         try {
             db = AliveDb.connect(getDataFolder().toPath().resolve("alive.db"), log);

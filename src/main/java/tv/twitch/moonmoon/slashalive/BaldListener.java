@@ -29,6 +29,7 @@ public class BaldListener implements Listener {
             return;
         }
 
+        // TODO: move off main thread
         try {
             db.insertPlayer(player);
         } catch (SQLException e) {
@@ -39,6 +40,7 @@ public class BaldListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
+        // TODO: move off main thread
         try {
             db.deletePlayer(event.getEntity().getName());
         } catch (SQLException e) {
